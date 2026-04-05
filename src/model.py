@@ -1,6 +1,6 @@
-
 import torch
 import torch.nn as nn
+import torchvision.models as models
 
 
 # =============================================================================
@@ -221,6 +221,94 @@ class Attention(nn.Module):
 
         # Squeeze to get final context vector
         return context.squeeze(1)  # Shape: [batch, hidden_dim]
+
+
+# =============================================================================
+# Improved Visual Encoder (ResNet18 - Transfer Learning)
+# =============================================================================
+
+class ResNetVisualEncoder(nn.Module):
+    """Here I am replacing the custom CNN with a pretrained ResNet18"""
+
+    def __init__(self, latent_dim=16):
+        super(ResNetVisualEncoder, self).__init__()
+        resnet = models.resnet18(pretrained=True)
+
+        self.features = nn.Sequential(*list(resnet.children())[:-2])
+
+        for param in list(self.features.parameters())[:-10]:
+            param.requires_grad = False
+
+        self.pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.project = nn.Linear(512, latent_dim)
+
+    def forward(self, x):
+        x = self.features(x)
+        x = self.pool(x)
+        x = x.view(x.size(0), -1)
+        x = self.project(x)
+        return x
+
+
+# =============================================================================
+# Modified  Sequence Predictor
+# =============================================================================
+
+class ModifiedSequencePredictor(nn.Module):
+    def __init__(self, visual_encoder, text_autoencoder, latent_dim,
+                 gru_hidden_dim):
+        super(ModifiedSequencePredictor, self).__init__()
+
+        self.image_encoder = visual_encoder
+        self.text_encoder = text_autoencoder.encoder
+
+        fusion_dim = latent_dim * 2
+        self.temporal_rnn = nn.GRU(fusion_dim, latent_dim, batch_first=True)
+
+        self.attention = Attention(gru_hidden_dim)
+
+        self.projection = nn.Sequential(
+            nn.Linear(gru_hidden_dim * 2, latent_dim),
+            nn.ReLU()
+        )
+
+        self.image_decoder = VisualDecoder(latent_dim)
+        self.text_decoder = text_autoencoder.decoder
+
+        self.fused_to_h0 = nn.Linear(latent_dim, 16)
+        self.fused_to_c0 = nn.Linear(latent_dim, 16)
+
+    def forward(self, image_seq, text_seq, target_seq):
+        batch_size, seq_len, C, H, W = image_seq.shape
+
+        img_flat = image_seq.view(batch_size * seq_len, C, H, W)
+        txt_flat = text_seq.view(batch_size * seq_len, -1)
+
+        z_v_flat = self.image_encoder(img_flat)
+        _, hidden, cell = self.text_encoder(txt_flat)
+
+        z_v_seq = z_v_flat.view(batch_size, seq_len, -1)
+        z_t_seq = hidden.squeeze(0).view(batch_size, seq_len, -1)
+
+        z_fusion_flat = torch.cat((z_v_flat, hidden.squeeze(0)), dim=1)
+        z_fusion_seq = z_fusion_flat.view(batch_size, seq_len, -1)
+
+        zseq, h = self.temporal_rnn(z_fusion_seq)
+        h = h.squeeze(0)
+
+        context = self.attention(zseq)
+
+        z = self.projection(torch.cat((h, context), dim=1))
+
+        pred_image_content, pred_image_context = self.image_decoder(z)
+
+        h0 = self.fused_to_h0(z).unsqueeze(0)
+        c0 = self.fused_to_c0(z).unsqueeze(0)
+
+        decoder_input = target_seq[:, :, :-1].squeeze(1)
+        predicted_text_logits_k, _hidden, _cell = self.text_decoder(decoder_input, h0, c0)
+
+        return pred_image_content, pred_image_context, predicted_text_logits_k, h0, c0, z_v_seq, z_t_seq
 
 
 # =============================================================================
