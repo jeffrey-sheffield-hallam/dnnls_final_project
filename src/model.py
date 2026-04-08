@@ -256,19 +256,27 @@ class ResNetVisualEncoder(nn.Module):
 
 class ModifiedSequencePredictor(nn.Module):
     def __init__(self, visual_encoder, text_autoencoder, latent_dim,
-                 gru_hidden_dim):
+                 gru_hidden_dim, use_bilstm=False):
         super(ModifiedSequencePredictor, self).__init__()
 
         self.image_encoder = visual_encoder
         self.text_encoder = text_autoencoder.encoder
 
+        self.use_bilstm = use_bilstm
         fusion_dim = latent_dim * 2
-        self.temporal_rnn = nn.GRU(fusion_dim, latent_dim, batch_first=True)
 
-        self.attention = Attention(gru_hidden_dim)
+        if use_bilstm:
+            self.temporal_rnn = nn.LSTM(fusion_dim, gru_hidden_dim,
+                                        batch_first=True, bidirectional=True)
+            temporal_output_dim = gru_hidden_dim * 2
+        else:
+            self.temporal_rnn = nn.GRU(fusion_dim, latent_dim, batch_first=True)
+            temporal_output_dim = gru_hidden_dim
+
+        self.attention = Attention(temporal_output_dim)
 
         self.projection = nn.Sequential(
-            nn.Linear(gru_hidden_dim * 2, latent_dim),
+            nn.Linear(temporal_output_dim * 2, latent_dim),
             nn.ReLU()
         )
 
@@ -293,8 +301,12 @@ class ModifiedSequencePredictor(nn.Module):
         z_fusion_flat = torch.cat((z_v_flat, hidden.squeeze(0)), dim=1)
         z_fusion_seq = z_fusion_flat.view(batch_size, seq_len, -1)
 
-        zseq, h = self.temporal_rnn(z_fusion_seq)
-        h = h.squeeze(0)
+        if self.use_bilstm:
+            zseq, (h, _) = self.temporal_rnn(z_fusion_seq)
+            h = torch.cat((h[0], h[1]), dim=1)
+        else:
+            zseq, h = self.temporal_rnn(z_fusion_seq)
+            h = h.squeeze(0)
 
         context = self.attention(zseq)
 
