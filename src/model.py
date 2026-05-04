@@ -270,7 +270,7 @@ class ModifiedSequencePredictor(nn.Module):
                                         batch_first=True, bidirectional=True)
             temporal_output_dim = gru_hidden_dim * 2
         else:
-            self.temporal_rnn = nn.GRU(fusion_dim, latent_dim, batch_first=True)
+            self.temporal_rnn = nn.GRU(fusion_dim, gru_hidden_dim, batch_first=True)
             temporal_output_dim = gru_hidden_dim
 
         self.attention = Attention(temporal_output_dim)
