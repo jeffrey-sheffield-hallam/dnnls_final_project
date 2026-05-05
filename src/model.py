@@ -256,14 +256,19 @@ class ResNetVisualEncoder(nn.Module):
 
 class ModifiedSequencePredictor(nn.Module):
     def __init__(self, visual_encoder, text_autoencoder, latent_dim,
-                 gru_hidden_dim, use_bilstm=False):
+                 gru_hidden_dim, use_bilstm=False, image_latent_dim=None):
         super(ModifiedSequencePredictor, self).__init__()
+
+        # If there are no separate image dim specified, we use the same as latent_dim
+        if image_latent_dim is None:
+            image_latent_dim = latent_dim
+        self.image_latent_dim = image_latent_dim
 
         self.image_encoder = visual_encoder
         self.text_encoder = text_autoencoder.encoder
 
         self.use_bilstm = use_bilstm
-        fusion_dim = latent_dim * 2
+        fusion_dim = image_latent_dim + latent_dim
 
         if use_bilstm:
             self.temporal_rnn = nn.LSTM(fusion_dim, gru_hidden_dim,
@@ -276,15 +281,15 @@ class ModifiedSequencePredictor(nn.Module):
         self.attention = Attention(temporal_output_dim)
 
         self.projection = nn.Sequential(
-            nn.Linear(temporal_output_dim * 2, latent_dim),
+            nn.Linear(temporal_output_dim * 2, image_latent_dim),
             nn.ReLU()
         )
 
-        self.image_decoder = VisualDecoder(latent_dim)
+        self.image_decoder = VisualDecoder(image_latent_dim)
         self.text_decoder = text_autoencoder.decoder
 
-        self.fused_to_h0 = nn.Linear(latent_dim, 16)
-        self.fused_to_c0 = nn.Linear(latent_dim, 16)
+        self.fused_to_h0 = nn.Linear(image_latent_dim, 16)
+        self.fused_to_c0 = nn.Linear(image_latent_dim, 16)
 
     def forward(self, image_seq, text_seq, target_seq):
         batch_size, seq_len, C, H, W = image_seq.shape

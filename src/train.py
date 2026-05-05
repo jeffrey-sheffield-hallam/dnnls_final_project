@@ -95,7 +95,7 @@ def train_model(model, train_dataloader, val_dataloader, tokenizer, device,
                     loss_reid = F.mse_loss(z_r1, z_r2)
 
                     # Option 2: frame-aware grounding MSE (ROI aligned to the description embedding of its frame)
-                    if USE_FRAME_AWARE_GROUNDING:
+                    if USE_FRAME_AWARE_GROUNDING and z_r1.size(-1) == z_t_seq.size(-1):
                         f = roi_frame[mask].clamp(min=0, max=z_t_seq.size(1) - 1)  # [M]
                         z_t_match = z_t_seq[mask].gather(
                             1, f.view(-1, 1, 1).expand(-1, 1, z_t_seq.size(-1))
@@ -103,7 +103,7 @@ def train_model(model, train_dataloader, val_dataloader, tokenizer, device,
                         loss_ground_mse = F.mse_loss(z_r1, z_t_match)
 
                     # Option 1: contrastive ROI↔text grounding (InfoNCE with batch negatives)
-                    if USE_CONTRASTIVE_ROI and USE_FRAME_AWARE_GROUNDING:
+                    if USE_CONTRASTIVE_ROI and USE_FRAME_AWARE_GROUNDING and z_r1.size(-1) == z_t_seq.size(-1):
                         # Normalize for cosine similarity
                         z_img = F.normalize(z_r1, dim=-1)
                         z_txt = F.normalize(z_t_match, dim=-1)
