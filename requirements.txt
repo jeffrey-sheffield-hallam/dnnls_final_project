@@ -1,0 +1,10 @@
+torch
+torchvision
+transformers
+datasets
+beautifulsoup4
+matplotlib
+numpy
+pytorch-msssim
+nltk
+grad-cam

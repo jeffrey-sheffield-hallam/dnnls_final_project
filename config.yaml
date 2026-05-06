@@ -1,0 +1,27 @@
+# Hyperparameters for the Multimodal Sequence Prediction Project
+
+# Model
+latent_dim: 16
+image_latent_dim: 64
+emb_dim: 16
+num_layers: 1
+dropout: true
+
+# Training
+batch_size: 8
+learning_rate: 0.001 # i reduced to 0.0001 for some lr investigation experiments
+n_epochs_baseline: 10
+n_epochs_improved: 20
+
+# Dataset
+dataset: daniel3303/StoryReasoning
+image_size: [60, 125]
+sequence_length: 4
+tokenizer: google-bert/bert-base-uncased
+max_token_length: 120
+
+# CoT Loss Weights
+lambda_reid: 0.10
+lambda_ground_mse: 0.10
+lambda_contrast: 0.10
+lambda_entity_pool: 0.05
