@@ -140,6 +140,8 @@ dnnls_final_project/
 ├── experiments.ipynb            # Main experimental notebook
 ├── config.yaml                  # Hyperparameters and settings
 ├── requirements.txt             # Python dependencies
+├── checkpoints/
+│   └── text_autoencoder.pth
 ├── src/
 │   ├── model.py                 # All model architectures (baseline + improved)
 │   ├── train.py                 # Training loop
