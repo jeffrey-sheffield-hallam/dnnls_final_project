@@ -118,6 +118,13 @@ The baseline model relies heavily on the most recent frame (Frame 4 receives 52%
 
 The improved model distributes attention more evenly, with Frame 1 receiving 21% compared to the baseline's 3%. This indicates the model considers the full narrative arc when making predictions. This more balanced attention also explains why BiLSTM provided no additional benefit: the GRU with ResNet already attends to all frames effectively, so the backward pass of BiLSTM has nothing meaningful to add.
 
+## Difficulties and Challenges
+
+- Understanding the root cause of the loss plateau at ~4.10 by trying out multiple experiments
+- Understanding the base architecture
+- Image quality being flat which indicated that the simple CNN decoder was a limitation that could not be addressed directly via encoder or training modifications.
+
+
 ## Architecture Overview
 
 The system processes 4 sequential image text pairs from a visual story and predicts the 5th frame (both image and text).
