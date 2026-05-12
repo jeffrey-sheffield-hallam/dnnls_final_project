@@ -120,8 +120,8 @@ The improved model distributes attention more evenly, with Frame 1 receiving 21%
 
 ## Difficulties and Challenges
 
-- Understanding the root cause of the loss plateau at ~4.10 by trying out multiple experiments
-- Understanding the base architecture
+- Understanding the root cause of the loss plateau at ~4.10 by trying out multiple experiments.
+- Understanding the base architecture.
 - Image quality being flat which indicated that the simple CNN decoder was a limitation that could not be addressed directly via encoder or training modifications.
 
 
@@ -178,6 +178,8 @@ dnnls_final_project/
 6. Run all cells sequentially
 
 Training the full experiment suite takes approximately 3-4 hours on an H100 GPU.
+
+I consulted AI tools to better my understanding of deep learning concepts and refine the wording of project documentation.
 
 ## Dataset
 
